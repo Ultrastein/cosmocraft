@@ -195,10 +195,11 @@ class Game {
 }
 
 const overlay = document.getElementById('overlay');
+let game = null;
 overlay.addEventListener('click', () => {
   overlay.classList.add('hidden');
   document.body.requestPointerLock();
-  new Game();
+  if (!game) game = new Game();
 });
 
 document.addEventListener('pointerlockchange', () => {
