@@ -158,7 +158,7 @@ Level 6 — Deep Space
   └─ Warp Core, Space Station Module
 ```
 
-Each level requires: resources + completed research (time-based or crafting a Computer Block).
+Each level requires: crafting a specific research item at the crafting table (e.g., "Research Module Lv2" = Silicon + Computer Block). Crafting it triggers the unlock instantly — no time gates.
 
 ---
 
