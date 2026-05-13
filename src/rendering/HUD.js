@@ -4,6 +4,10 @@ export class HUD {
   constructor(inventory) {
     this._inv = inventory;
     this._miningProgress = 0;
+    this._oxygen      = 100;
+    this._energy      = 100;
+    this._temperature = 80;
+    this._health      = 100;
 
     this._canvas = document.createElement('canvas');
     this._canvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;';
@@ -22,6 +26,13 @@ export class HUD {
     this._miningProgress = p;
   }
 
+  setSurvivalStats(oxygen, energy, temperature, health) {
+    this._oxygen      = oxygen;
+    this._energy      = energy;
+    this._temperature = temperature;
+    this._health      = health;
+  }
+
   draw() {
     const ctx = this._ctx;
     const W = this._canvas.width;
@@ -29,6 +40,7 @@ export class HUD {
     ctx.clearRect(0, 0, W, H);
 
     this._drawCrosshair(ctx, W, H);
+    this._drawSurvivalBars(ctx, W, H);
     this._drawHotbar(ctx, W, H);
     if (this._miningProgress > 0) this._drawMiningBar(ctx, W, H);
   }
@@ -93,5 +105,80 @@ export class HUD {
     ctx.fillRect(bx, by, barW, barH);
     ctx.fillStyle = '#f90';
     ctx.fillRect(bx, by, barW * this._miningProgress, barH);
+  }
+
+  _drawSurvivalBars(ctx, W, H) {
+    const bars = [
+      { label: 'Energy',  value: this._energy,      max: 100 },
+      { label: 'Oxygen',  value: this._oxygen,       max: 100 },
+      { label: 'Temp',    value: this._temperature,  max: 100 },
+    ];
+
+    const BAR_W = 160, BAR_H = 18, GAP = 24;
+    const totalW = bars.length * BAR_W + (bars.length - 1) * GAP;
+    let x = (W - totalW) / 2;
+    const y = 16;
+
+    for (const bar of bars) {
+      const pct = Math.max(0, Math.min(1, bar.value / bar.max));
+
+      // Determine color based on fill level
+      let color;
+      if (pct > 0.6)      color = '#4f4';
+      else if (pct > 0.3) color = '#ff4';
+      else                color = '#f44';
+
+      // Label
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(bar.label, x, y + 11);
+
+      // Background
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.beginPath();
+      ctx.roundRect(x, y + 14, BAR_W, BAR_H, 3);
+      ctx.fill();
+
+      // Fill
+      if (pct > 0) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.roundRect(x, y + 14, BAR_W * pct, BAR_H, 3);
+        ctx.fill();
+      }
+
+      // Value text on the right
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(Math.round(bar.value), x + BAR_W - 2, y + 14 + BAR_H - 4);
+
+      x += BAR_W + GAP;
+    }
+
+    // Health bar — only shown when player is damaged
+    if (this._health < 100) {
+      const pct = this._health / 100;
+      const hx = (W - 300) / 2;
+      const hy = y + 14 + BAR_H + 8;
+
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.beginPath();
+      ctx.roundRect(hx, hy, 300, 10, 3);
+      ctx.fill();
+
+      ctx.fillStyle = '#f44';
+      ctx.beginPath();
+      ctx.roundRect(hx, hy, 300 * pct, 10, 3);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Health: ${Math.round(this._health)}`, W / 2, hy + 9);
+    }
+
+    ctx.textAlign = 'left';
   }
 }
