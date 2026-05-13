@@ -18,7 +18,8 @@ class Game {
   constructor() {
     this._renderer  = new Renderer();
     this._world     = new World(42);
-    this._player    = new Player(0.5, 20, 0.5);
+    const spawnY    = this._findSpawnY(0, 0);
+    this._player    = new Player(0.5, spawnY, 0.5);
     this._physics   = new Physics(this._world);
     this._inventory = new Inventory();
     this._hud       = new HUD(this._inventory);
@@ -39,6 +40,17 @@ class Game {
 
     this._lastTime = performance.now();
     requestAnimationFrame(t => this._loop(t));
+  }
+
+  _findSpawnY(wx, wz) {
+    // Scan downward from y=32 to find the first solid surface, then stand on top
+    for (let wy = 32; wy >= 0; wy--) {
+      if (this._world.getBlock(wx, wy, wz) !== BLOCKS.AIR &&
+          this._world.getBlock(wx, wy + 1, wz) === BLOCKS.AIR) {
+        return wy + 1 + 0.01; // stand just above the surface
+      }
+    }
+    return 16; // fallback
   }
 
   _preGenerate() {
@@ -206,13 +218,28 @@ class Game {
 }
 
 const overlay = document.getElementById('overlay');
+const overlayHint = document.getElementById('overlay-hint');
 let game = null;
+
+function requestLock() {
+  const p = document.body.requestPointerLock();
+  if (p && p.catch) p.catch(() => {
+    if (overlayHint) overlayHint.textContent = 'Permití el bloqueo del cursor cuando el browser lo pida';
+  });
+}
+
 overlay.addEventListener('click', () => {
   overlay.classList.add('hidden');
-  document.body.requestPointerLock();
+  requestLock();
   if (!game) game = new Game();
 });
 
 document.addEventListener('pointerlockchange', () => {
   if (!document.pointerLockElement) overlay.classList.remove('hidden');
+});
+
+// Re-lock if user clicks anywhere while game is running but pointer isn't locked
+document.addEventListener('click', () => {
+  if (game && !overlay.classList.contains('hidden')) return; // handled by overlay
+  if (game && !document.pointerLockElement) requestLock();
 });
