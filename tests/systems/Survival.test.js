@@ -2,12 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { Survival } from '../../src/systems/Survival.js';
 
 describe('Survival', () => {
-  it('starts at full oxygen, energy, health; temperature at midpoint', () => {
+  it('starts at full oxygen, energy, health; temperature initialized to 80', () => {
     const s = new Survival();
     expect(s.getOxygen()).toBe(100);
     expect(s.getEnergy()).toBe(100);
     expect(s.getHealth()).toBe(100);
-    // temperature at dayProgress=0 should be 80 (50 + 30*cos(0))
+    // Constructor sets _temperature = 80 (= 50 + 30*cos(0), matching noon at dayProgress=0)
+    expect(s.getTemperature()).toBe(80);
   });
 
   it('oxygen depletes over time', () => {

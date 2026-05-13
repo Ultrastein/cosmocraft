@@ -191,6 +191,7 @@ class Game {
       this._survival.getTemperature(),
       this._survival.getHealth()
     );
+    // TODO Phase 3: check this._survival.isAlive() here for death screen
     this._updateMining(dt);
     this._loadChunks();
     this._updateChunkMeshes();
