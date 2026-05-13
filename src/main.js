@@ -8,6 +8,7 @@ import { Player }         from './player/Player.js';
 import { Physics }        from './player/Physics.js';
 import { Inventory }      from './player/Inventory.js';
 import { raycast }        from './utils/MathUtils.js';
+import { Survival }       from './systems/Survival.js';
 
 const RENDER_DISTANCE      = 4;
 const MINING_REACH         = 5;
@@ -21,6 +22,7 @@ class Game {
     this._physics   = new Physics(this._world);
     this._inventory = new Inventory();
     this._hud       = new HUD(this._inventory);
+    this._survival  = new Survival();
     this._meshes    = new Map();
     this._blockData = BLOCK_DATA;
 
@@ -181,6 +183,14 @@ class Game {
 
     this._player.update(dt);
     this._physics.update(this._player, dt);
+    this._renderer.updateDayNight(dt);
+    this._survival.update(dt, this._renderer.getDayProgress());
+    this._hud.setSurvivalStats(
+      this._survival.getOxygen(),
+      this._survival.getEnergy(),
+      this._survival.getTemperature(),
+      this._survival.getHealth()
+    );
     this._updateMining(dt);
     this._loadChunks();
     this._updateChunkMeshes();
