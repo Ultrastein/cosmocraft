@@ -25,8 +25,11 @@ export class Renderer {
     this.sun.position.set(60, 120, 40);
     this.scene.add(this.sun);
 
-    this._dayTime   = 0;      // 0..1 fraction through the day
+    this._dayTime   = 0;      // 0 = noon, 0.5 = midnight
     this._dayLength = 600;    // seconds for a full cycle
+
+    // Pre-allocate reusable sky color object to avoid per-frame GC pressure
+    this._skyColor = new THREE.Color(4/255, 4/255, 15/255); // initial dark sky
 
     // Wireframe box shown around the targeted block
     const outlineGeo = new THREE.BoxGeometry(1.01, 1.01, 1.01);
@@ -91,9 +94,9 @@ export class Renderer {
     const skyR = Math.round(4  + warmth * 8);
     const skyG = Math.round(4  + warmth * 8);
     const skyB = Math.round(15 + warmth * 20);
-    const skyColor = new THREE.Color(skyR / 255, skyG / 255, skyB / 255);
-    this.scene.background = skyColor;
-    this.scene.fog.color  = skyColor;
+    this._skyColor.setRGB(skyR / 255, skyG / 255, skyB / 255);
+    this.scene.background = this._skyColor;
+    this.scene.fog.color  = this._skyColor;
   }
 
   render() {
