@@ -108,10 +108,26 @@ export class HUD {
   }
 
   _drawSurvivalBars(ctx, W, H) {
+    ctx.save();
+
     const bars = [
-      { label: 'Energy',  value: this._energy,      max: 100 },
-      { label: 'Oxygen',  value: this._oxygen,       max: 100 },
-      { label: 'Temp',    value: this._temperature,  max: 100 },
+      {
+        label: 'Energy', value: this._energy, max: 100,
+        colorFn: (pct) => pct > 0.6 ? '#4f4' : pct > 0.3 ? '#ff4' : '#f44',
+      },
+      {
+        label: 'Oxygen', value: this._oxygen, max: 100,
+        colorFn: (pct) => pct > 0.6 ? '#4f4' : pct > 0.3 ? '#ff4' : '#f44',
+      },
+      {
+        label: 'Temp', value: this._temperature, max: 100,
+        // Safe at 50, danger at extremes (< 20 = cold, > 80 = heat)
+        colorFn: (_pct) => {
+          const v = this._temperature;
+          const dist = Math.abs(v - 50) / 50; // 0 = safe (50°), 1 = extreme
+          return dist < 0.3 ? '#4f4' : dist < 0.6 ? '#ff4' : '#f44';
+        },
+      },
     ];
 
     const BAR_W = 160, BAR_H = 18, GAP = 24;
@@ -122,11 +138,8 @@ export class HUD {
     for (const bar of bars) {
       const pct = Math.max(0, Math.min(1, bar.value / bar.max));
 
-      // Determine color based on fill level
-      let color;
-      if (pct > 0.6)      color = '#4f4';
-      else if (pct > 0.3) color = '#ff4';
-      else                color = '#f44';
+      // Determine color using per-bar color function
+      const color = bar.colorFn(pct);
 
       // Label
       ctx.fillStyle = 'rgba(255,255,255,0.8)';
@@ -160,17 +173,17 @@ export class HUD {
     // Health bar — only shown when player is damaged
     if (this._health < 100) {
       const pct = this._health / 100;
-      const hx = (W - 300) / 2;
+      const hx = (W - totalW) / 2;
       const hy = y + 14 + BAR_H + 8;
 
       ctx.fillStyle = 'rgba(0,0,0,0.55)';
       ctx.beginPath();
-      ctx.roundRect(hx, hy, 300, 10, 3);
+      ctx.roundRect(hx, hy, totalW, 10, 3);
       ctx.fill();
 
       ctx.fillStyle = '#f44';
       ctx.beginPath();
-      ctx.roundRect(hx, hy, 300 * pct, 10, 3);
+      ctx.roundRect(hx, hy, totalW * pct, 10, 3);
       ctx.fill();
 
       ctx.fillStyle = 'rgba(255,255,255,0.7)';
@@ -179,6 +192,6 @@ export class HUD {
       ctx.fillText(`Health: ${Math.round(this._health)}`, W / 2, hy + 9);
     }
 
-    ctx.textAlign = 'left';
+    ctx.restore();
   }
 }
