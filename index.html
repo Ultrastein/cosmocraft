@@ -16,13 +16,19 @@
       cursor: pointer; z-index: 10;
     }
     #overlay.hidden { display: none; }
+    #travel-ui.hidden { display: none; }
   </style>
 </head>
 <body>
   <div id="overlay">
     <div style="text-align:center">
       <div style="font-size:48px;margin-bottom:16px">🚀 CosmoCraft</div>
-      <div id="overlay-hint">Click para empezar</div>
+      <div style="margin-bottom:20px;">
+        <button id="btn-survival" style="padding:10px 20px; font-size:18px; margin:5px; cursor:pointer; background:#28f; color:#fff; border:none; border-radius:4px;">Supervivencia</button>
+        <button id="btn-creative" style="padding:10px 20px; font-size:18px; margin:5px; cursor:pointer; background:#f82; color:#fff; border:none; border-radius:4px;">Creativo</button>
+        <button id="btn-inspector" style="padding:10px 20px; font-size:18px; margin:5px; cursor:pointer; background:#282; color:#fff; border:none; border-radius:4px;">Inspector</button>
+      </div>
+      <div id="overlay-hint" style="color:#aaa;">Selecciona un modo para empezar</div>
       <div style="font-size:14px;margin-top:12px;color:#5af">
         WASD mover · Espacio saltar · Click izq minar · Click der colocar · Rueda cambiar bloque
       </div>
@@ -31,7 +37,18 @@
       </div>
     </div>
   </div>
+  
+  <div id="travel-ui" class="hidden" style="position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,20,0.9);color:#fff;z-index:20;display:flex;">
+    <div style="text-align:center; padding: 20px; border: 2px solid #5af; background: #001; border-radius: 8px;">
+      <h2 style="margin-bottom:20px; color:#5af;">Viaje Planetario</h2>
+      <div id="planet-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+      </div>
+      <button id="btn-cancel-travel" style="padding:8px 16px; cursor:pointer; background:#555; color:#fff; border:none; border-radius:4px;">Cancelar</button>
+    </div>
+  </div>
+
   <div id="hud"></div>
+  <div id="pause-menu" class="hidden" style="position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,20,0.92);color:#fff;z-index:30;display:flex;"></div>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
