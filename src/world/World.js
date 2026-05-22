@@ -1,11 +1,13 @@
 import { CHUNK_SIZE } from './Chunk.js';
 import { WorldGen } from './WorldGen.js';
 import { BLOCKS } from './BlockRegistry.js';
+import { normalizePlanetConfig } from './Planets.js';
 
 export class World {
-  constructor(seed = 12345) {
+  constructor(seedOrPlanet = 12345) {
     this._chunks = new Map();
-    this._gen = new WorldGen(seed);
+    this.planet = normalizePlanetConfig(seedOrPlanet);
+    this._gen = new WorldGen(this.planet);
   }
 
   _key(cx, cy, cz) {
@@ -45,7 +47,17 @@ export class World {
     return [...this._chunks.values()].filter(c => c.dirty);
   }
 
+  clear() {
+    this._chunks.clear();
+  }
+
   markClean(chunk) {
     chunk.dirty = false;
+  }
+
+  markAllDirty() {
+    for (const chunk of this._chunks.values()) {
+      chunk.dirty = true;
+    }
   }
 }
