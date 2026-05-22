@@ -28,8 +28,10 @@ export class Renderer {
     this._dayTime   = 0;      // 0 = noon, 0.5 = midnight
     this._dayLength = 600;    // seconds for a full cycle
 
-    // Pre-allocate reusable sky color object to avoid per-frame GC pressure
-    this._skyColor = new THREE.Color(4/255, 4/255, 15/255); // initial dark sky
+    // Pre-allocate reusable sky color objects to avoid per-frame GC pressure
+    this._daySkyColor = new THREE.Color(0x0c0c23);
+    this._nightSkyColor = new THREE.Color(0x04040f);
+    this._skyColor = new THREE.Color(0x04040f);
 
     // Wireframe box shown around the targeted block
     const outlineGeo = new THREE.BoxGeometry(1.01, 1.01, 1.01);
@@ -65,6 +67,41 @@ export class Renderer {
     return this._dayTime;
   }
 
+  setPlanet(planet) {
+    const atmosphere = planet?.atmosphere;
+    if (!atmosphere) return;
+
+    this._daySkyColor.setHex(atmosphere.daySky);
+    this._nightSkyColor.setHex(atmosphere.nightSky);
+    this.scene.fog.near = atmosphere.fogNear;
+    this.scene.fog.far = atmosphere.fogFar;
+    this.updateDayNight(0);
+  }
+
+  /**
+   * Apply graphics settings. Call at startup and whenever settings change.
+   * @param {{ renderDistance?: number, fog?: boolean, quality?: string }} settings
+   */
+  applySettings({ renderDistance = 4, fog = true, quality = 'medium' } = {}) {
+    const CHUNK_SIZE = 16;
+    const far = renderDistance * CHUNK_SIZE * 2 + 64;
+    this.camera.far = far;
+    this.camera.updateProjectionMatrix();
+
+    if (fog) {
+      this.scene.fog.near = renderDistance * CHUNK_SIZE * 0.5;
+      this.scene.fog.far  = far - 16;
+    } else {
+      this.scene.fog.near = 100000;
+      this.scene.fog.far  = 100001;
+    }
+
+    const ratios = { low: 0.5, medium: 1.0, high: window.devicePixelRatio || 1.0 };
+    this._renderer.setPixelRatio(ratios[quality] ?? 1.0);
+
+    this._settings = { renderDistance, fog, quality };
+  }
+
   updateDayNight(dt) {
     this._dayTime = (this._dayTime + dt / this._dayLength) % 1;
 
@@ -90,13 +127,10 @@ export class Renderer {
     const ambientI = 0.15 + warmth * 0.45;
     this._ambientLight.intensity = ambientI;
 
-    // Sky/fog color: near-black at night, dark-blue-purple at day
-    const skyR = Math.round(4  + warmth * 8);
-    const skyG = Math.round(4  + warmth * 8);
-    const skyB = Math.round(15 + warmth * 20);
-    this._skyColor.setRGB(skyR / 255, skyG / 255, skyB / 255);
+    // Sky/fog color follows the current planet palette.
+    this._skyColor.lerpColors(this._nightSkyColor, this._daySkyColor, warmth);
     this.scene.background = this._skyColor;
-    this.scene.fog.color  = this._skyColor;
+    this.scene.fog.color.copy(this._skyColor);
   }
 
   render() {

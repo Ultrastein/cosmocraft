@@ -11,7 +11,11 @@ const FACES = [
   { dir: [ 0, 0,-1], corners: [[1,0,0],[0,0,0],[0,1,0],[1,1,0]], normal: [ 0, 0,-1] },
 ];
 
-export function buildChunkMesh(chunk, getBlock) {
+/**
+ * @param {Function} getBlock (wx,wy,wz) => blockId
+ * @param {Function|null} getColor (blockId) => colorNumber — falls back to BLOCK_DATA default
+ */
+export function buildChunkMesh(chunk, getBlock, getColor = null) {
   const positions = [];
   const normals = [];
   const colors = [];
@@ -25,9 +29,10 @@ export function buildChunkMesh(chunk, getBlock) {
         if (block === BLOCKS.AIR) continue;
 
         const data = BLOCK_DATA[block];
-        const r = ((data.color >> 16) & 0xff) / 255;
-        const g = ((data.color >>  8) & 0xff) / 255;
-        const b = ( data.color        & 0xff) / 255;
+        const colorNum = getColor ? getColor(block) : data.color;
+        const r = ((colorNum >> 16) & 0xff) / 255;
+        const g = ((colorNum >>  8) & 0xff) / 255;
+        const b = ( colorNum        & 0xff) / 255;
         const wx = chunk.cx * CHUNK_SIZE + lx;
         const wy = chunk.cy * CHUNK_SIZE + ly;
         const wz = chunk.cz * CHUNK_SIZE + lz;
