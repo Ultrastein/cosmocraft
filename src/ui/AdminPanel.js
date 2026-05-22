@@ -35,6 +35,9 @@ export class AdminPanel {
     const list = document.createElement('div');
     list.style.cssText = 'display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;';
 
+    // Keep direct references so reset can update without fragile DOM queries
+    const rows = [];
+
     ALL_BLOCKS.forEach(block => {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;gap:12px;';
@@ -63,6 +66,8 @@ export class AdminPanel {
       row.appendChild(label);
       row.appendChild(picker);
       list.appendChild(row);
+
+      rows.push({ block, swatch, picker });
     });
 
     el.appendChild(list);
@@ -76,14 +81,10 @@ export class AdminPanel {
     resetBtn.addEventListener('click', () => {
       this._admin.resetAll();
       this._onChange();
-      // Refresh all pickers and swatches to defaults
-      const rows = list.querySelectorAll('div');
-      rows.forEach((row, i) => {
-        if (i >= ALL_BLOCKS.length) return;
-        const block = ALL_BLOCKS[i];
-        const hex   = numToHex(this._admin.getColor(block.id));
-        row.querySelector('input[type="color"]').value = hex;
-        row.querySelector('div').style.background = hex;
+      rows.forEach(({ block, swatch, picker }) => {
+        const hex = numToHex(this._admin.getColor(block.id));
+        swatch.style.background = hex;
+        picker.value = hex;
       });
     });
     el.appendChild(resetBtn);
