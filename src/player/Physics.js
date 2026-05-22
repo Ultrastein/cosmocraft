@@ -1,15 +1,30 @@
 import { BLOCK_DATA } from '../world/BlockRegistry.js';
 
-const GRAVITY = -22;
 const TERMINAL_VEL = -50;
+const BASE_GRAVITY = -22;
 
 export class Physics {
   constructor(world) {
     this._world = world;
   }
 
-  update(player, dt) {
-    player.velocity.y = Math.max(player.velocity.y + GRAVITY * dt, TERMINAL_VEL);
+  update(player, dt, options = {}) {
+    const creativeFlight = options.creativeFlight ?? player.creativeFlight;
+    const noClip = options.noClip ?? false;
+    const gravityScale = options.gravityScale ?? this._world.planet?.gravityScale ?? 1;
+
+    // noClip: free movement, skip gravity and collision entirely
+    if (noClip) {
+      player.position.x += player.velocity.x * dt;
+      player.position.y += player.velocity.y * dt;
+      player.position.z += player.velocity.z * dt;
+      return;
+    }
+
+    if (!creativeFlight) {
+      const gravity = BASE_GRAVITY * gravityScale;
+      player.velocity.y = Math.max(player.velocity.y + gravity * dt, TERMINAL_VEL);
+    }
 
     this._moveAxis(player, 'x', player.velocity.x * dt);
     this._moveAxis(player, 'y', player.velocity.y * dt);
