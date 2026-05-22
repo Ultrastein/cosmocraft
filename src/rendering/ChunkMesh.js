@@ -12,7 +12,8 @@ const FACES = [
 ];
 
 /**
- * @param {Function} getBlock (wx,wy,wz) => blockId
+ * @param {object} chunk  The chunk to mesh (has cx/cy/cz and getBlock method)
+ * @param {Function} getBlock (wx,wy,wz) => blockId — world-space neighbor lookup
  * @param {Function|null} getColor (blockId) => colorNumber — falls back to BLOCK_DATA default
  */
 export function buildChunkMesh(chunk, getBlock, getColor = null) {

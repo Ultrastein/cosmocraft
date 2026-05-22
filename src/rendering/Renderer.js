@@ -73,9 +73,15 @@ export class Renderer {
 
     this._daySkyColor.setHex(atmosphere.daySky);
     this._nightSkyColor.setHex(atmosphere.nightSky);
-    this.scene.fog.near = atmosphere.fogNear;
-    this.scene.fog.far = atmosphere.fogFar;
     this.updateDayNight(0);
+    // Re-apply graphics settings so fog distances reflect current render distance.
+    // If applySettings has not been called yet, use planet atmosphere defaults.
+    if (this._settings) {
+      this.applySettings(this._settings);
+    } else {
+      this.scene.fog.near = atmosphere.fogNear;
+      this.scene.fog.far  = atmosphere.fogFar;
+    }
   }
 
   /**
