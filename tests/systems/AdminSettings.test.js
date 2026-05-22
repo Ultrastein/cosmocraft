@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { BLOCK_DATA, BLOCKS } from '../../src/world/BlockRegistry.js';
 
 // Minimal localStorage mock
@@ -17,6 +17,10 @@ describe('AdminSettings', () => {
     ls = makeLsStub();
     vi.stubGlobal('localStorage', ls);
     vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('returns default BLOCK_DATA color when no override set', async () => {
@@ -54,5 +58,19 @@ describe('AdminSettings', () => {
     const { AdminSettings } = await import('../../src/systems/AdminSettings.js');
     const a = new AdminSettings();
     expect(a.getColor(BLOCKS.STEEL_BLOCK)).toBe(0x112233);
+  });
+
+  it('setColor ignores invalid hex strings', async () => {
+    const { AdminSettings } = await import('../../src/systems/AdminSettings.js');
+    const a = new AdminSettings();
+    a.setColor(BLOCKS.REGOLITH, 'invalid');
+    // Should not store NaN, should still return default
+    expect(a.getColor(BLOCKS.REGOLITH)).toBe(BLOCK_DATA[BLOCKS.REGOLITH].color);
+  });
+
+  it('getColor returns 0x888888 for unknown blockId', async () => {
+    const { AdminSettings } = await import('../../src/systems/AdminSettings.js');
+    const a = new AdminSettings();
+    expect(a.getColor(999)).toBe(0x888888);
   });
 });

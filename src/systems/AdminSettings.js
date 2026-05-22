@@ -15,13 +15,17 @@ export class AdminSettings {
 
   /** hexString: '#rrggbb' */
   setColor(blockId, hexString) {
-    this._colors[String(blockId)] = parseInt(hexString.replace('#', ''), 16);
+    const val = parseInt(hexString.replace(/^#/, ''), 16);
+    if (Number.isNaN(val)) return;
+    this._colors[String(blockId)] = val;
     this._save();
   }
 
   resetAll() {
     this._colors = {};
-    this._save();
+    try {
+      localStorage.removeItem(LS_KEY);
+    } catch { /* ignore */ }
   }
 
   _load() {
