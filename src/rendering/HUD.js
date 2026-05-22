@@ -9,6 +9,14 @@ export class HUD {
     this._temperature = 80;
     this._health      = 100;
 
+    this._mode        = 'survival';
+    this._planetName  = 'Terra Nova';
+    this._prompt      = null;
+
+    this._inspectorInfo = null; // { blockName, x, y, z, cx, cy, cz } or null
+    this._fpsHistory    = [];   // rolling array of recent dt values (max 60 entries)
+    this._fps           = 0;
+
     this._canvas = document.createElement('canvas');
     this._canvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;';
     document.getElementById('hud').appendChild(this._canvas);
@@ -26,6 +34,29 @@ export class HUD {
     this._miningProgress = p;
   }
 
+  setWorldInfo(mode, planetName) {
+    this._mode = mode;
+    this._planetName = planetName;
+  }
+
+  setInteractionPrompt(text) {
+    this._prompt = text;
+  }
+
+  /** Call each frame when in inspector mode. Pass null to clear the overlay. */
+  setInspectorInfo(info) {
+    this._inspectorInfo = info;
+  }
+
+  /** Call each frame with the current delta-time in seconds. Updates rolling FPS average. */
+  updateFPS(dt) {
+    if (dt <= 0) return;
+    this._fpsHistory.push(dt);
+    if (this._fpsHistory.length > 60) this._fpsHistory.shift();
+    const avg = this._fpsHistory.reduce((s, v) => s + v, 0) / this._fpsHistory.length;
+    this._fps = Math.round(1 / avg);
+  }
+
   setSurvivalStats(oxygen, energy, temperature, health) {
     this._oxygen      = oxygen;
     this._energy      = energy;
@@ -40,9 +71,37 @@ export class HUD {
     ctx.clearRect(0, 0, W, H);
 
     this._drawCrosshair(ctx, W, H);
-    this._drawSurvivalBars(ctx, W, H);
+    if (this._mode !== 'creative') {
+      this._drawSurvivalBars(ctx, W, H);
+    }
     this._drawHotbar(ctx, W, H);
     if (this._miningProgress > 0) this._drawMiningBar(ctx, W, H);
+    this._drawWorldInfo(ctx, W, H);
+    if (this._prompt) this._drawPrompt(ctx, W, H);
+    if (this._mode === 'inspector') this._drawInspectorOverlay(ctx, W, H);
+  }
+
+  _drawWorldInfo(ctx, W, H) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'right';
+    const modeText = this._mode === 'creative' ? 'Modo: Creativo' : 'Modo: Supervivencia';
+    ctx.fillText(modeText, W - 20, 30);
+    ctx.fillStyle = '#5af';
+    ctx.fillText(`Planeta: ${this._planetName}`, W - 20, 50);
+    ctx.restore();
+  }
+
+  _drawPrompt(ctx, W, H) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = 'bold 18px monospace';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#000';
+    ctx.shadowBlur = 4;
+    ctx.fillText(this._prompt, W / 2, H / 2 + 50);
+    ctx.restore();
   }
 
   _drawCrosshair(ctx, W, H) {
@@ -86,7 +145,8 @@ export class HUD {
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 11px monospace';
         ctx.textAlign = 'right';
-        ctx.fillText(slot.count, x + SLOT - 4, sy + SLOT - 4);
+        const count = slot.count === Infinity ? 'MAX' : slot.count;
+        ctx.fillText(count, x + SLOT - 4, sy + SLOT - 4);
       }
 
       ctx.fillStyle = 'rgba(255,255,255,0.5)';
@@ -105,6 +165,28 @@ export class HUD {
     ctx.fillRect(bx, by, barW, barH);
     ctx.fillStyle = '#f90';
     ctx.fillRect(bx, by, barW * this._miningProgress, barH);
+  }
+
+  _drawInspectorOverlay(ctx, W, H) {
+    const info = this._inspectorInfo;
+    const blockPart = info
+      ? `Block: ${info.blockName}  (${info.x}, ${info.y}, ${info.z})  |  Chunk: (${info.cx}, ${info.cy}, ${info.cz})`
+      : 'Block: Air';
+    const text = `${blockPart}  |  FPS: ${this._fps}`;
+
+    ctx.save();
+    ctx.font = 'bold 13px monospace';
+    ctx.textAlign = 'center';
+    // Background pill
+    const tw = ctx.measureText(text).width + 20;
+    const bx = (W - tw) / 2;
+    const by = H - 100;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(bx, by, tw, 22);
+    // Text
+    ctx.fillStyle = '#7af';
+    ctx.fillText(text, W / 2, by + 15);
+    ctx.restore();
   }
 
   _drawSurvivalBars(ctx, W, H) {
