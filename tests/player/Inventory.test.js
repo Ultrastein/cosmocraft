@@ -54,4 +54,12 @@ describe('Inventory', () => {
     inv.selectSlot(0);
     expect(inv.getSelected()).toEqual({ id: BLOCKS.STEEL_BLOCK, count: 10 });
   });
+
+  it('creative inventory does not consume blocks', () => {
+    const inv = new Inventory();
+    inv.setCreative(true, [BLOCKS.STEEL_BLOCK]);
+    expect(inv.getSelected()).toEqual({ id: BLOCKS.STEEL_BLOCK, count: Infinity });
+    expect(inv.removeItem(BLOCKS.STEEL_BLOCK, 1)).toBe(true);
+    expect(inv.getSelected()).toEqual({ id: BLOCKS.STEEL_BLOCK, count: Infinity });
+  });
 });

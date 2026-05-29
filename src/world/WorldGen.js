@@ -1,14 +1,13 @@
 import { Chunk, CHUNK_SIZE } from './Chunk.js';
 import { BLOCKS } from './BlockRegistry.js';
 import { SimplexNoise } from '../utils/Noise.js';
-
-const TERRAIN_BASE = 8;
-const TERRAIN_AMPLITUDE = 6;
+import { normalizePlanetConfig } from './Planets.js';
 
 export class WorldGen {
-  constructor(seed = 12345) {
-    this.noise = new SimplexNoise(seed);
-    this.oreNoise = new SimplexNoise(seed ^ 0xdeadbeef);
+  constructor(seedOrPlanet = 12345) {
+    this.planet = normalizePlanetConfig(seedOrPlanet);
+    this.noise = new SimplexNoise(this.planet.seed);
+    this.oreNoise = new SimplexNoise(this.planet.seed ^ 0xdeadbeef);
   }
 
   generateChunk(cx, cy, cz) {
@@ -38,18 +37,22 @@ export class WorldGen {
   }
 
   _surfaceHeight(wx, wz) {
-    const n = this.noise.noise2D(wx / 32, wz / 32);
-    return Math.floor(TERRAIN_BASE + n * TERRAIN_AMPLITUDE);
+    const terrain = this.planet.terrain;
+    const n = this.noise.noise2D(wx / terrain.noiseScale, wz / terrain.noiseScale);
+    return Math.floor(terrain.baseHeight + n * terrain.amplitude);
   }
 
   _blockAt(wx, wy, wz, surfaceY) {
+    const terrain = this.planet.terrain;
+
     if (wy > surfaceY) return BLOCKS.AIR;
-    if (wy === surfaceY) return BLOCKS.REGOLITH;
-    if (wy >= surfaceY - 3) return BLOCKS.REGOLITH;
+    if (wy === surfaceY) return terrain.surfaceBlock;
+    if (wy >= surfaceY - 3) return terrain.crustBlock;
 
     const ore = this.oreNoise.noise3D(wx / 8, wy / 8, wz / 8);
-    if (ore > 0.75) return BLOCKS.SILICON_CRYSTAL;
-    if (ore > 0.60) return BLOCKS.IRON_ORE;
-    return BLOCKS.REGOLITH;
+    for (const resource of terrain.ores) {
+      if (ore > resource.threshold) return resource.block;
+    }
+    return terrain.crustBlock;
   }
 }

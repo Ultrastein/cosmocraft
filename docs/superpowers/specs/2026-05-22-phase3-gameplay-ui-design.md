@@ -112,7 +112,7 @@ Grid of all blocks (excluding AIR), showing each block's current color (respects
 ### Layout
 - Tile per block: colored square (24×24px) + block name.
 - Click behavior by mode:
-  - **Survival**: adds 1 unit to first empty hotbar slot.
+  - **Survival**: calls `inventory.addItem(blockId, 1)` (stacks onto existing slot, or opens new slot).
   - **Creative**: sets selected hotbar slot to that block with infinite count.
   - **Inspector**: hover shows hardness and color hex; click does nothing.
 - Panel is scrollable if blocks overflow.

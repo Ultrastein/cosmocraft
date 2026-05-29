@@ -10,7 +10,9 @@ export class Survival {
     this._health      = 100;
   }
 
-  update(dt, dayProgress) {
+  update(dt, dayProgress, options = {}) {
+    if (options.paused) return;
+
     this._oxygen      = Math.max(0, this._oxygen - OXYGEN_DEPLETION * dt);
     this._energy      = Math.max(0, this._energy - ENERGY_DEPLETION * dt);
     this._temperature = Math.round(50 + 30 * Math.cos(dayProgress * 2 * Math.PI));

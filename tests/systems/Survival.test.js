@@ -78,4 +78,13 @@ describe('Survival', () => {
     s.update(1000, 0);
     expect(s.isAlive()).toBe(false);
   });
+
+  it('does not deplete stats while paused', () => {
+    const s = new Survival();
+    s.update(100, 0.5, { paused: true });
+    expect(s.getOxygen()).toBe(100);
+    expect(s.getEnergy()).toBe(100);
+    expect(s.getTemperature()).toBe(80);
+    expect(s.getHealth()).toBe(100);
+  });
 });

@@ -4,6 +4,18 @@ export class Inventory {
   constructor() {
     this.slots = new Array(36).fill(null);
     this.selectedSlot = 0;
+    this.creative = false;
+  }
+
+  setCreative(enabled, blockTypes = []) {
+    this.creative = enabled;
+    if (!enabled) return;
+
+    this.slots.fill(null);
+    blockTypes.slice(0, this.slots.length).forEach((blockType, index) => {
+      this.slots[index] = { id: blockType, count: Infinity };
+    });
+    this.selectedSlot = 0;
   }
 
   addItem(blockType, count = 1) {
@@ -26,6 +38,8 @@ export class Inventory {
   }
 
   removeItem(blockType, count = 1) {
+    if (this.creative) return true;
+
     const total = this.slots.reduce((s, slot) =>
       s + (slot?.id === blockType ? slot.count : 0), 0);
     if (total < count) return false;
