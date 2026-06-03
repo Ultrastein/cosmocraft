@@ -110,4 +110,8 @@ describe('BUILDABLE_BLOCKS', () => {
     expect(BUILDABLE_BLOCKS.has(BLOCKS.IRON_ORE)).toBe(false);
     expect(BUILDABLE_BLOCKS.has(BLOCKS.ICE_BLOCK)).toBe(false);
   });
+
+  it('contains exactly 10 buildable block types', () => {
+    expect(BUILDABLE_BLOCKS.size).toBe(10);
+  });
 });
