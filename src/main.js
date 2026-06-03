@@ -13,6 +13,9 @@ import { Survival }       from './systems/Survival.js';
 import { TravelSystem }   from './systems/TravelSystem.js';
 import { AdminSettings }  from './systems/AdminSettings.js';
 import { PauseMenu }      from './ui/PauseMenu.js';
+import { RocketVehicle }     from './systems/RocketVehicle.js';
+import { RocketInteraction } from './systems/RocketInteraction.js';
+import { floodFillRocket, validateRocket } from './systems/RocketLogic.js';
 
 const RENDER_DISTANCE       = 4;
 const MINING_REACH          = 5;
@@ -33,6 +36,9 @@ const CREATIVE_BLOCKS = [
   BLOCKS.IRON_ORE,
   BLOCKS.SILICON_CRYSTAL,
   BLOCKS.TITANIUM_ORE,
+  BLOCKS.THRUSTER,
+  BLOCKS.COMMAND_PANEL,
+  BLOCKS.CAPSULE,
 ];
 
 class Game {
@@ -52,6 +58,9 @@ class Game {
     this._hud          = new HUD(this._inventory);
     this._survival     = new Survival();
     this._travel       = new TravelSystem(this._renderer.scene);
+    this._rocketVehicle     = null;
+    this._pilotMode         = false;
+    this._rocketInteraction = new RocketInteraction(this._world);
     this._meshes       = new Map();
     this._blockData    = BLOCK_DATA;
     this._adminSettings = new AdminSettings();
@@ -142,6 +151,67 @@ class Game {
     this._travel.setPosition(SHIP_X + 0.5, floorY + 1.01, SHIP_Z + 0.5);
   }
 
+  _tryLaunchRocket({ blockX, blockY, blockZ }) {
+    const blocks = floodFillRocket(this._world, blockX, blockY, blockZ);
+    const result = validateRocket(blocks);
+
+    if (!result.valid) {
+      let msg;
+      if (!result.hasCapsule)        msg = 'Falta bloque Cápsula en la nave';
+      else if (!result.hasThruster)  msg = 'Falta al menos un Propulsor';
+      else {
+        const extra = Math.ceil((result.needed - result.totalThrust) / 15);
+        msg = `Faltan propulsores: agregá ${extra} más`;
+      }
+      this._hud.setInteractionPrompt(msg);
+      setTimeout(() => this._hud.setInteractionPrompt(null), 3000);
+      return;
+    }
+
+    // Remove blocks from world
+    for (const b of blocks) {
+      this._world.setBlock(b.x, b.y, b.z, BLOCKS.AIR);
+    }
+
+    this._rocketVehicle = new RocketVehicle(
+      this._renderer.scene,
+      blocks,
+      (id) => this._adminSettings.getColor(id)
+    );
+    this._pilotMode = true;
+
+    if (document.pointerLockElement) document.exitPointerLock();
+    setTimeout(() => this._requestLock(), 150);
+  }
+
+  _exitPilotMode() {
+    if (!this._rocketVehicle) return;
+
+    // Move player to rocket's last position
+    this._player.position.x = this._rocketVehicle.position.x;
+    this._player.position.y = this._rocketVehicle.position.y + 1;
+    this._player.position.z = this._rocketVehicle.position.z;
+    this._player.velocity   = { x: 0, y: 0, z: 0 };
+
+    this._rocketVehicle.dispose();
+    this._rocketVehicle = null;
+    this._pilotMode     = false;
+  }
+
+  _updateCameraPilot() {
+    const veh = this._rocketVehicle;
+    const behindX = veh.position.x - Math.sin(veh.yaw) * 10;
+    const behindZ = veh.position.z + Math.cos(veh.yaw) * 10;
+    const camY    = veh.position.y + 4;
+
+    this._renderer.camera.position.set(behindX, camY, behindZ);
+    this._renderer.camera.lookAt(
+      veh.position.x,
+      veh.position.y + 1,
+      veh.position.z
+    );
+  }
+
   _bindInput() {
     document.addEventListener('mousedown', e => {
       this._mouseButtons[e.button] = true;
@@ -168,7 +238,9 @@ class Game {
         if (sel) this._inventory.removeItem(sel.id, 1);
       }
       if (e.code === 'Escape') {
-        if (this._travelMapOpen) {
+        if (this._pilotMode) {
+          this._exitPilotMode();
+        } else if (this._travelMapOpen) {
           this.closeTravelMap(false);
         } else if (this._pauseMenu.isOpen()) {
           this._pauseMenu.close();
@@ -176,8 +248,20 @@ class Game {
           this._pauseMenu.open();
         }
       }
-      if (e.code === 'KeyF' && !this._travelMapOpen && this._travel.canInteract(this._player)) {
-        this._openTravelMap();
+      if (e.code === 'KeyF') {
+        if (this._pilotMode && this._rocketVehicle) {
+          // In pilot mode: travel if high enough
+          if (this._rocketVehicle.position.y >= 20) {
+            this._openTravelMap();
+          }
+        } else if (!this._travelMapOpen) {
+          if (this._travel.canInteract(this._player)) {
+            this._openTravelMap();
+          } else {
+            const rocketHit = this._rocketInteraction.check(this._player);
+            if (rocketHit) this._tryLaunchRocket(rocketHit);
+          }
+        }
       }
     });
   }
@@ -219,6 +303,9 @@ class Game {
   }
 
   travelTo(planetId) {
+    if (this._pilotMode) {
+      this._exitPilotMode();
+    }
     const nextPlanet = getPlanetById(planetId);
     if (nextPlanet.id === this.currentPlanet.id) return;
 
@@ -228,6 +315,7 @@ class Game {
 
     this._world = new World(this.currentPlanet);
     this._physics = new Physics(this._world);
+    this._rocketInteraction.setWorld(this._world);
     this._player.position.x = 0.5;
     this._player.position.y = this._findSpawnY(0, 0);
     this._player.position.z = 0.5;
@@ -362,12 +450,44 @@ class Game {
       this._hud.setInteractionPrompt(null);
       return;
     }
-    this._hud.setInteractionPrompt(this._travel.canInteract(this._player) ? 'F viajar' : null);
+    if (this._travel.canInteract(this._player)) {
+      this._hud.setInteractionPrompt('F viajar');
+      return;
+    }
+    const rocketPrompt = this._rocketInteraction.getPrompt(this._player);
+    this._hud.setInteractionPrompt(rocketPrompt);
   }
 
   _loop(timestamp) {
     const dt = Math.min((timestamp - this._lastTime) / 1000, 0.05);
     this._lastTime = timestamp;
+
+    // ── Pilot mode: rocket vehicle drives the frame ──────────────────────
+    if (this._pilotMode && this._rocketVehicle) {
+      this._rocketVehicle.update(dt, this._player._keys, this.currentPlanet.gravityScale);
+      this._updateCameraPilot();
+      this._renderer.updateDayNight(dt);
+      this._survival.update(dt, this._renderer.getDayProgress(), {
+        paused: this.mode !== 'survival',
+      });
+      this._hud.setSurvivalStats(
+        this._survival.getOxygen(),
+        this._survival.getEnergy(),
+        this._survival.getTemperature(),
+        this._survival.getHealth()
+      );
+      this._hud.updateFPS(dt);
+      this._hud.setMiningProgress(0);
+      const altitude = this._rocketVehicle.position.y;
+      this._hud.setInteractionPrompt(altitude >= 20 ? 'F → viajar al espacio' : null);
+      this._loadChunks();
+      this._updateChunkMeshes();
+      this._hud.draw();
+      this._renderer.render();
+      requestAnimationFrame(t => this._loop(t));
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────
 
     const isInspector = this.mode === 'inspector';
     const isFlight    = this.mode === 'creative' || isInspector;
